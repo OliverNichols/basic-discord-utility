@@ -1,0 +1,13 @@
+version: "3.7"
+
+services:
+
+  mh-bot:
+    container_name: mh-bot
+    image: mh-bot:latest
+    build:
+      context: .
+    env_file: .env
+    restart: on-failure
+    volumes:
+      - ./modules:/bot/modules
