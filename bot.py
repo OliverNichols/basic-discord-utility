@@ -29,4 +29,4 @@ class MH_Bot(commands.Bot):
 bot = MH_Bot()
 
 if __name__ == '__main__':
-    bot.run(os.getenv('mh_bot_token'))
+    bot.run(os.getenv('bot_token'))
