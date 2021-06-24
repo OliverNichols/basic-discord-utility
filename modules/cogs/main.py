@@ -7,8 +7,12 @@ from ..ext import constants, funcs
 class Main(commands.Cog):
 
     document_name = "Fast wins calculation"
-    sheet_number = 2
-    cell_reference = "BA3"
+    sheet_number = 1
+
+    cell_refs = {
+        'NA': 'BA3',
+        'EU': 'BA4'
+    }
 
     def __init__(self, bot):
         self.bot = bot
@@ -19,14 +23,27 @@ class Main(commands.Cog):
         self.google_client = gspread.authorize(creds)
 
     @commands.command()
-    async def get(self, ctx):
-        "Ping all players that have not yet participated in today's CW."
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    async def get(self, ctx, *, na_or_eu:funcs.value_in(['na','eu'])):
+        "Ping all players that have not yet participated in today's CW from a specific region."
+
+        region = na_or_eu
         
         sheet = self.google_client.open(self.document_name).worksheets()[self.sheet_number-1]
-        data = sheet.get(self.cell_reference)[0][0]
+        cell = self.cell_refs[region.upper()]
 
-        embed = discord.Embed(color=constants.blue, title="Remaining Players", description=data)
-        await ctx.send(embed=embed)
+        try: 
+            data = sheet.get(cell)[0][0]
+            
+            for ping in filter(None, data.split(', ')):
+                name = ping.split('#')[0][1:]
+
+                member = discord.utils.get(ctx.guild.members, name=name)
+                if member: data = data.replace(ping, member.mention)
+            
+        except IndexError: data = f"No data found on sheet {self.sheet_number}, cell {cell}."
+        
+        await ctx.send(f"**Remaining Players from {region.upper()}:** {data}")
 
     @commands.command(hidden=True)
     @commands.is_owner()
@@ -72,7 +89,7 @@ class Main(commands.Cog):
             if command:
                 embed.description = '\n'.join(filter(None, [
                     command.callback.__doc__,
-                    "Usage: **`{}`**".format(f"{ctx.prefix}{command_name} {command.signature}".rstrip())
+                    self.bot.get_formatting(ctx, command.name)
                 ]))
 
             else:
